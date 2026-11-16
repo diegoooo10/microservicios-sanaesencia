@@ -1,0 +1,170 @@
+
+name: sanaesencia
+
+services:
+
+  # ==========================================
+  # BASES DE DATOS
+  # ==========================================
+
+  mysql-usuarios:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: sanaesencia_usuarios
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    volumes:
+      - mysql_usuarios_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    networks:
+      - sanaesencia-network
+
+  mysql-servicios:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: sanaesencia_servicios
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    volumes:
+      - mysql_servicios_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    networks:
+      - sanaesencia-network
+
+  mysql-profesionales:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: sanaesencia_profesionales
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    volumes:
+      - mysql_profesionales_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    networks:
+      - sanaesencia-network
+
+  mysql-reservas:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: sanaesencia_reservas
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    volumes:
+      - mysql_reservas_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    networks:
+      - sanaesencia-network
+
+  # ==========================================
+  # MICROSERVICIO USUARIOS
+  # ==========================================
+
+  usuario-service:
+    build: ./usuario-service-sanaesencia
+    depends_on:
+      mysql-usuarios:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8081:8081"
+    networks:
+      - sanaesencia-network
+
+  # ==========================================
+  # MICROSERVICIO SERVICIOS
+  # ==========================================
+
+  servicio-service:
+    build: ./servicio-service-sanaesencia
+    depends_on:
+      mysql-servicios:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8082:8082"
+    networks:
+      - sanaesencia-network
+
+  # ==========================================
+  # MICROSERVICIO PROFESIONALES
+  # ==========================================
+
+  profesional-service:
+    build: ./profesional-service-sanaesencia
+    depends_on:
+      mysql-profesionales:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8083:8083"
+    networks:
+      - sanaesencia-network
+
+  # ==========================================
+  # MICROSERVICIO RESERVAS
+  # ==========================================
+
+  reserva-service:
+    build: ./reserva-service-sanaesencia
+    depends_on:
+      mysql-reservas:
+        condition: service_healthy
+      servicio-service:
+        condition: service_started
+      profesional-service:
+        condition: service_started
+    ports:
+      - "127.0.0.1:8084:8084"
+    networks:
+      - sanaesencia-network
+
+  # ==========================================
+  # API GATEWAY
+  # ==========================================
+
+  api-gateway:
+    build: ./api-gateway-sanaesencia
+    depends_on:
+      usuario-service:
+        condition: service_started
+      servicio-service:
+        condition: service_started
+      profesional-service:
+        condition: service_started
+      reserva-service:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    networks:
+      - sanaesencia-network
+
+# ==========================================
+# RED
+# ==========================================
+
+networks:
+  sanaesencia-network:
+    driver: bridge
+
+# ==========================================
+# VOLÚMENES
+# ==========================================
+
+volumes:
+  mysql_usuarios_data:
+  mysql_servicios_data:
+  mysql_profesionales_data:
+  mysql_reservas_data:

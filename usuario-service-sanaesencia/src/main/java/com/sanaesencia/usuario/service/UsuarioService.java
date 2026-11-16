@@ -1,14 +1,10 @@
-package com.sanaesencia.usuario.service;
 
-import java.util.List;
+package com.sanaesencia.usuario.service;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.sanaesencia.usuario.exception.CredencialesInvalidasException;
-import com.sanaesencia.usuario.exception.UsuarioDuplicadoException;
-import com.sanaesencia.usuario.exception.UsuarioNoEncontradoException;
 import com.sanaesencia.usuario.mapper.UsuarioMapper;
 import com.sanaesencia.usuario.model.dto.*;
 import com.sanaesencia.usuario.model.entity.Usuario;
@@ -20,91 +16,139 @@ import com.sanaesencia.usuario.security.JwtService;
 @Transactional
 public class UsuarioService {
 
-    private final UsuarioRepository usuarioRepository;
-    private final UsuarioMapper usuarioMapper;
+    private final UsuarioRepository repository;
+    private final UsuarioMapper mapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
     public UsuarioService(
-            UsuarioRepository usuarioRepository,
-            UsuarioMapper usuarioMapper,
+            UsuarioRepository repository,
+            UsuarioMapper mapper,
             PasswordEncoder passwordEncoder,
-            JwtService jwtService) {
-        this.usuarioRepository = usuarioRepository;
-        this.usuarioMapper = usuarioMapper;
+            JwtService jwtService
+    ) {
+        this.repository = repository;
+        this.mapper = mapper;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
     }
 
-    public UsuarioResponse registrarUsuario(UsuarioRequest request) {
+    public UsuarioResponse registrar(UsuarioRequest request) {
+
         String correo = request.correo().trim().toLowerCase();
-        if (usuarioRepository.existsByCorreo(correo)) {
-            throw new UsuarioDuplicadoException("Ya existe un usuario registrado con ese correo");
+
+        if (repository.existsByCorreo(correo)) {
+            throw new IllegalArgumentException(
+                    "El correo ya está registrado"
+            );
         }
 
-        Usuario usuario = usuarioMapper.toEntity(request);
-        usuario.setPassword(passwordEncoder.encode(request.password()));
+        if (repository.existsByRun(request.run().trim())) {
+            throw new IllegalArgumentException(
+                    "El RUN ya está registrado"
+            );
+        }
+
+        Usuario usuario = mapper.toEntity(request);
+
+        usuario.setPassword(
+                passwordEncoder.encode(request.password())
+        );
+
         usuario.setRol(Rol.CLIENTE);
 
-        return usuarioMapper.toResponse(usuarioRepository.save(usuario));
+        return mapper.toResponse(repository.save(usuario));
     }
 
-    @Transactional(readOnly = true)
     public LoginResponse iniciarSesion(LoginRequest request) {
-        Usuario usuario = usuarioRepository.findByCorreo(request.correo().trim().toLowerCase())
-                .orElseThrow(() -> new CredencialesInvalidasException("Correo o contraseña incorrectos"));
 
-        if (!passwordEncoder.matches(request.password(), usuario.getPassword())) {
-            throw new CredencialesInvalidasException("Correo o contraseña incorrectos");
+        Usuario usuario = repository.findByCorreo(
+                request.correo().trim().toLowerCase()
+        ).orElseThrow(() ->
+                new IllegalArgumentException("Credenciales inválidas")
+        );
+
+        if (!passwordEncoder.matches(
+                request.password(),
+                usuario.getPassword()
+        )) {
+            throw new IllegalArgumentException(
+                    "Credenciales inválidas"
+            );
         }
 
-        String token = jwtService.generarToken(usuario);
-        return new LoginResponse(token, "Bearer", usuarioMapper.toResponse(usuario));
+        return new LoginResponse(
+                jwtService.generateToken(usuario),
+                "Bearer",
+                usuario.getCorreo(),
+                usuario.getRol().name(),
+                jwtService.getExpirationMs()
+        );
     }
 
     @Transactional(readOnly = true)
-    public UsuarioResponse obtenerPerfil(String correoAutenticado) {
-        return usuarioMapper.toResponse(buscarPorCorreo(correoAutenticado));
+    public UsuarioResponse obtenerPerfil(Long userId) {
+
+        return repository.findById(userId)
+                .map(mapper::toResponse)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Usuario no encontrado")
+                );
     }
 
-    public UsuarioResponse actualizarPerfil(String correoAutenticado, UsuarioUpdateRequest request) {
-        Usuario usuario = buscarPorCorreo(correoAutenticado);
-        String nuevoCorreo = request.correo().trim().toLowerCase();
+    public UsuarioResponse actualizarPerfil(
+            Long userId,
+            UsuarioUpdateRequest request
+    ) {
 
-        usuarioRepository.findByCorreo(nuevoCorreo).ifPresent(existente -> {
-            if (!existente.getId().equals(usuario.getId())) {
-                throw new UsuarioDuplicadoException("Ya existe otro usuario registrado con ese correo");
+        Usuario usuario = repository.findById(userId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Usuario no encontrado")
+                );
+
+        if (request.correo() == null
+                && request.direccion() == null
+                && request.telefono() == null) {
+
+            throw new IllegalArgumentException(
+                    "Debe proporcionar al menos un dato para actualizar"
+            );
+        }
+
+        if (request.correo() != null) {
+
+            String nuevoCorreo = request.correo()
+                    .trim()
+                    .toLowerCase();
+
+            if (nuevoCorreo.isBlank()) {
+                throw new IllegalArgumentException(
+                        "El correo no puede estar vacío"
+                );
             }
-        });
 
-        usuarioMapper.actualizarPerfil(request, usuario);
-        return usuarioMapper.toResponse(usuarioRepository.save(usuario));
-    }
+            if (!nuevoCorreo.equals(usuario.getCorreo())
+                    && repository.existsByCorreoAndIdNot(
+                            nuevoCorreo,
+                            usuario.getId()
+                    )) {
 
-    @Transactional(readOnly = true)
-    public List<UsuarioResponse> listarUsuarios() {
-        return usuarioRepository.findAll().stream()
-                .map(usuarioMapper::toResponse)
-                .toList();
-    }
+                throw new IllegalArgumentException(
+                        "El correo ya está registrado"
+                );
+            }
 
-    @Transactional(readOnly = true)
-    public UsuarioResponse obtenerUsuarioPorId(Long id) {
-        return usuarioMapper.toResponse(buscarPorId(id));
-    }
+            usuario.setCorreo(nuevoCorreo);
+        }
 
-    public void eliminarUsuario(Long id) {
-        Usuario usuario = buscarPorId(id);
-        usuarioRepository.delete(usuario);
-    }
+        if (request.direccion() != null) {
+            usuario.setDireccion(request.direccion().trim());
+        }
 
-    private Usuario buscarPorCorreo(String correo) {
-        return usuarioRepository.findByCorreo(correo)
-                .orElseThrow(() -> new UsuarioNoEncontradoException("No se encontró el usuario autenticado"));
-    }
+        if (request.telefono() != null) {
+            usuario.setTelefono(request.telefono().trim());
+        }
 
-    private Usuario buscarPorId(Long id) {
-        return usuarioRepository.findById(id)
-                .orElseThrow(() -> new UsuarioNoEncontradoException("No se encontró el usuario con id " + id));
+        return mapper.toResponse(repository.save(usuario));
     }
 }

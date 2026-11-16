@@ -1,2 +1,4 @@
 package com.sanaesencia.reserva.model.enums;
-public enum EstadoReserva { PENDIENTE, CONFIRMADA, REALIZADA, CANCELADA, AUSENTE }
+public enum EstadoReserva {
+    CONFIRMADA, CANCELADA, REALIZADA, AUSENTE
+}

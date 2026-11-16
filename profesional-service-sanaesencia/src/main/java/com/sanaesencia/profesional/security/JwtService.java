@@ -10,11 +10,17 @@ import io.jsonwebtoken.security.Keys;
 
 @Service
 public class JwtService {
-    private final SecretKey key;
+    private final SecretKey signingKey;
+
     public JwtService(@Value("${app.jwt.secret}") String secret) {
-        this.key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
+        this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
     }
-    public Claims validarYObtenerClaims(String token) {
-        return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
+
+    public Claims validateAndGetClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(signingKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }

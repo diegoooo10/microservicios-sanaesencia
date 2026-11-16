@@ -1,35 +1,106 @@
+
 package com.sanaesencia.reserva.controller;
+
 import java.net.URI;
 import java.util.List;
+
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+
 import com.sanaesencia.reserva.model.dto.ReservaRequest;
+import com.sanaesencia.reserva.model.dto.ReservaResponse;
+import com.sanaesencia.reserva.mapper.ReservaMapper;
 import com.sanaesencia.reserva.model.entity.Reserva;
 import com.sanaesencia.reserva.service.ReservaService;
-import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/reservas")
+@SecurityRequirement(name = "Bearer Authentication")
 public class ReservaController {
-    private final ReservaService service;
-    public ReservaController(ReservaService service) {this.service=service;}
 
-    @PostMapping
-    public ResponseEntity<Reserva> crear(Authentication auth, @Valid @RequestBody ReservaRequest request) {
-        Reserva creada=service.crear(auth.getName(),request);
-        return ResponseEntity.created(URI.create("/api/reservas/"+creada.getId())).body(creada);
+    private final ReservaService service;
+    private final ReservaMapper mapper;
+
+    public ReservaController(
+            ReservaService service,
+            ReservaMapper mapper
+    ) {
+        this.service = service;
+        this.mapper = mapper;
     }
 
-    @GetMapping("/mis-reservas")
-    public List<Reserva> listarPropias(Authentication auth) {return service.listarPropias(auth.getName());}
+    @PostMapping
+    @Operation(summary = "Crear una reserva para el cliente autenticado")
+    public ResponseEntity<ReservaResponse> crear(
+            Authentication authentication,
+            HttpServletRequest request,
+            @Valid @RequestBody ReservaRequest reservaRequest
+    ) {
 
-    @GetMapping("/mis-reservas/<built-in function id>")
-    public Reserva obtenerPropia(Authentication auth,@PathVariable Long id) {return service.obtenerPropia(id,auth.getName());}
+        Long userId = (Long) authentication.getPrincipal();
 
-    @PatchMapping("/mis-reservas/<built-in function id>/cancelacion")
-    public Reserva cancelar(Authentication auth,@PathVariable Long id) {return service.cancelar(id,auth.getName());}
+        String authorizationHeader = request.getHeader(
+                HttpHeaders.AUTHORIZATION
+        );
+
+        Reserva creada = service.crear(
+                userId,
+                reservaRequest,
+                authorizationHeader
+        );
+
+        return ResponseEntity
+                .created(URI.create("/api/reservas/" + creada.getId()))
+                .body(mapper.toResponse(creada));
+    }
 
     @GetMapping
-    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
-    public List<Reserva> listarTodas() {return service.listarTodas();}
+    @Operation(summary = "Listar las reservas del cliente autenticado")
+    public List<ReservaResponse> listar(
+            Authentication authentication
+    ) {
+
+        Long userId = (Long) authentication.getPrincipal();
+
+        return service.listarPropias(userId)
+                .stream()
+                .map(mapper::toResponse)
+                .toList();
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Consultar una reserva propia")
+    public ReservaResponse obtener(
+            Authentication authentication,
+            @PathVariable Long id
+    ) {
+
+        Long userId = (Long) authentication.getPrincipal();
+
+        return mapper.toResponse(
+                service.obtenerPropia(id, userId)
+        );
+    }
+
+    @PatchMapping("/{id}/cancelacion")
+    @Operation(summary = "Cancelar una reserva propia con al menos 12 horas de anticipación")
+    public ReservaResponse cancelar(
+            Authentication authentication,
+            @PathVariable Long id
+    ) {
+
+        Long userId = (Long) authentication.getPrincipal();
+
+        return mapper.toResponse(
+                service.cancelar(id, userId)
+        );
+    }
 }

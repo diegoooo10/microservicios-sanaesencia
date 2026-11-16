@@ -1,17 +1,7 @@
-
-# Maven
-**/target/
-
-# IDE
-.idea/
-.vscode/
-
-# Sistema operativo
+﻿**/target/
+**/.idea/
+**/.vscode/
+*.iml
+*.log
 .DS_Store
 Thumbs.db
-
-# Archivos locales y secretos
-.env
-.env.*
-!.env.example
-**/application-local.properties

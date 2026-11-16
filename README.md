@@ -1,210 +1,117 @@
-# Microservicios SanaEsencia
+# SanaEsencia Backend completo - demostración
 
-Repositorio que reúne los microservicios backend de **SanaEsencia**, una
-aplicación Android desarrollada con Kotlin y Jetpack Compose.
+Incluye cuatro microservicios independientes y API Gateway:
+- usuario-service-sanaesencia (8081)
+- servicio-service-sanaesencia (8082)
+- profesional-service-sanaesencia (8083)
+- reserva-service-sanaesencia (8084)
+- api-gateway-sanaesencia (8080)
 
-La solución está organizada como cuatro microservicios independientes,
-desarrollados con Spring Boot, que exponen APIs RESTful y utilizan bases
-de datos MySQL separadas.
+Stack: Java 21, Spring Boot 4.1.2, Maven, MySQL 8.4, Spring Security, JWT, Springdoc OpenAPI.
 
-## Arquitectura
-
-  -----------------------------------------------------------------------------------------
-  Microservicio                       Responsabilidad         Base de datos
-  ----------------------------------- ----------------------- -----------------------------
-  `usuario-service-sanaesencia`       Registro, inicio de     `sanaesencia_usuarios`
-                                      sesión, gestión de      
-                                      usuarios y              
-                                      autenticación mediante  
-                                      JWT.                    
-
-  `catalogo-service-sanaesencia`      Administración y        `sanaesencia_catalogo`
-                                      consulta de             
-                                      especialidades y        
-                                      servicios.              
-
-  `profesional-service-sanaesencia`   Gestión y consulta de   `sanaesencia_profesionales`
-                                      profesionales.          
-
-  `reserva-service-sanaesencia`       Gestión de reservas y   `sanaesencia_reservas`
-                                      sus estados.            
-  -----------------------------------------------------------------------------------------
-
-Cada microservicio mantiene su propio proyecto Maven, configuración,
-capa de persistencia y base de datos. Esta separación permite
-desarrollar y ejecutar los servicios de manera independiente.
-
-## Tecnologías
-
--   Java 21
--   Spring Boot 4.1.2
--   Apache Maven
--   Spring Web
--   Spring Data JPA
--   Spring Security
--   Spring Validation
--   MySQL
--   JWT (JJWT 0.12.6)
--   Springdoc OpenAPI / Swagger UI (3.0.1)
-
-## Estructura del repositorio
-
-``` text
-Microservicios-SanaEsencia/
-├── usuario-service-sanaesencia/
-├── catalogo-service-sanaesencia/
-├── profesional-service-sanaesencia/
-├── reserva-service-sanaesencia/
-├── .gitignore
-└── README.md
+## Ejecutar
+Desde la carpeta que contiene `compose.yaml`:
+```powershell
+docker compose up --build -d
+docker compose ps
 ```
 
-## Requisitos
-
--   JDK 21.
--   Apache Maven instalado y disponible en el `PATH`.
--   MySQL en ejecución (por ejemplo, mediante Laragon).
--   La base de datos correspondiente creada en MySQL, salvo que la
-    configuración local del servicio esté preparada para crearla
-    automáticamente.
-
-## Configuración local
-
-Cada microservicio tiene su propio archivo
-`src/main/resources/application.properties`.
-
-Antes de ejecutarlo:
-
-1.  Revisa el puerto configurado en el archivo del servicio.
-2.  Configura la URL JDBC para su base de datos.
-3.  Configura el usuario y la contraseña de MySQL mediante variables de
-    entorno o un mecanismo local que no se suba al repositorio.
-4.  Configura la clave secreta JWT de forma segura y coherente entre los
-    servicios que validan esos tokens.
-
-**Seguridad:** no publiques contraseñas, claves JWT ni credenciales
-reales. Evita guardar secretos directamente en archivos versionados.
-Para valores locales, utiliza variables de entorno o un archivo local
-excluido por `.gitignore`.
-
-## Compilar y ejecutar
-
-Los comandos se ejecutan desde la carpeta del microservicio que se desea
-trabajar.
-
-### Compilar
-
-``` powershell
-mvn clean compile
+Detener:
+```powershell
+docker compose down
+```
+Los datos persisten en volúmenes. Para reiniciar las bases desde cero (BORRA LOS DATOS):
+```powershell
+docker compose down -v
 ```
 
-Una compilación correcta finaliza con `BUILD SUCCESS`. Esto verifica la
-compilación, pero no garantiza por sí solo que la conexión a MySQL, la
-autenticación o los endpoints funcionen.
+## Swagger
+- Usuarios: http://localhost:8081/swagger-ui/index.html
+- Servicios: http://localhost:8082/swagger-ui/index.html
+- Profesionales: http://localhost:8083/swagger-ui/index.html
+- Reservas: http://localhost:8084/swagger-ui/index.html
 
-### Ejecutar
+## Gateway
+El gateway enruta:
+- `/api/usuarios/**`
+- `/api/especialidades/**`
+- `/api/servicios/**`
+- `/api/profesionales/**`
+- `/api/reservas/**`
 
-``` powershell
-mvn spring-boot:run
+## Endpoints principales
+### Usuarios
+- POST `/api/usuarios/registro`
+- POST `/api/usuarios/login`
+- GET `/api/usuarios/perfil` (CLIENTE)
+- PATCH `/api/usuarios/perfil` (CLIENTE)
+
+Registro JSON:
+```json
+{
+  "nombre": "Ana",
+  "apellido": "Pérez",
+  "correo": "ana@example.com",
+  "run": "12345678-9",
+  "fechaNacimiento": "1995-05-10",
+  "password": "ClaveSegura123"
+}
 ```
 
-También se puede abrir el proyecto individualmente en un IDE y ejecutar
-su clase principal de Spring Boot.
-
-### Swagger UI
-
-Cuando el servicio esté iniciado, abre en el navegador:
-
-``` text
-http://localhost:<PUERTO>/swagger-ui/index.html
+Login JSON:
+```json
+{
+  "correo": "ana@example.com",
+  "password": "ClaveSegura123"
+}
 ```
 
-Reemplaza `<PUERTO>` por el puerto configurado en el
-`application.properties` del microservicio.
+### Servicios
+- GET `/api/especialidades`
+- GET `/api/especialidades/{id}`
+- GET `/api/servicios`
+- GET `/api/servicios?especialidadId=1`
+- GET `/api/servicios/{id}`
 
-## Autenticación
+### Profesionales
+- GET `/api/profesionales`
+- GET `/api/profesionales?especialidadId=1`
+- GET `/api/profesionales/{id}`
 
-El servicio de usuarios implementa registro e inicio de sesión y genera
-tokens JWT. Los microservicios protegidos utilizan Spring Security y un
-filtro JWT para validar las solicitudes autenticadas.
+### Reservas
+Todas requieren `Authorization: Bearer <token>`.
+- POST `/api/reservas`
+- GET `/api/reservas`
+- GET `/api/reservas/{id}`
+- PATCH `/api/reservas/{id}/cancelacion`
 
-Para acceder a un endpoint protegido, el cliente debe enviar el token en
-el encabezado HTTP:
-
-``` http
-Authorization: Bearer <TOKEN>
+Crear reserva JSON:
+```json
+{
+  "profesionalId": 1,
+  "servicioId": 1,
+  "fecha": "2027-01-15",
+  "hora": "10:00:00",
+  "modalidad": "Online"
+}
 ```
+La duración, nombre de la especialidad, nombre del profesional y nombre del servicio se obtienen de los otros microservicios, no del cliente. Las respuestas de reserva usan DTO y no exponen el correo interno del usuario.
 
-Los permisos concretos dependen de la configuración de seguridad y de
-los roles definidos en cada servicio.
+## Datos de demostración
+El servicio inicializa especialidades y servicios de ejemplo.
+Profesionales crea dos profesionales asociados a especialidad 1 y 2.
+En un entorno limpio los IDs iniciales son 1 y 2.
 
-## Integración con la aplicación Android
+## Seguridad
+Todos los microservicios comparten el mismo secreto JWT de demostración definido en `application.properties` y en Compose. El secreto es público dentro de este paquete y SOLO sirve para pruebas locales. Sustituirlo por un secreto privado antes de desplegar.
+La contraseña de usuario se almacena con BCrypt. No se expone en las respuestas.
 
-La aplicación cliente está desarrollada con Kotlin y Jetpack Compose. La
-comunicación con los microservicios se realizará mediante solicitudes
-HTTP, utilizando Retrofit en la capa de datos.
-
-Al ejecutar la aplicación en un dispositivo físico, la URL base debe
-apuntar a la dirección IP local del computador donde se ejecutan los
-servicios, junto con el puerto correspondiente. `localhost` desde el
-teléfono hace referencia al propio teléfono, no al computador.
-
-## Organización de ramas
-
-  -------------------------------------------------------------------------
-  Rama                                Contenido
-  ----------------------------------- -------------------------------------
-  `main`                              Contiene los cuatro microservicios y
-                                      representa la versión integrada.
-
-  `usuario-service`                   Contiene únicamente
-                                      `usuario-service-sanaesencia/`.
-
-  `catalogo-service`                  Contiene únicamente
-                                      `catalogo-service-sanaesencia/`.
-
-  `profesional-service`               Contiene únicamente
-                                      `profesional-service-sanaesencia/`.
-
-  `reserva-service`                   Contiene únicamente
-                                      `reserva-service-sanaesencia/`.
-  -------------------------------------------------------------------------
-
-### Flujo de trabajo
-
-1.  Cambiar a la rama del microservicio que se va a desarrollar.
-2.  Realizar y probar los cambios en ese servicio.
-3.  Crear commits descriptivos y subirlos a su rama remota.
-4.  Cuando los cambios estén revisados, integrarlos en `main` mediante
-    merge o pull request.
-5.  Mantener `main` como la versión integrada y estable del proyecto.
-
-Ejemplo:
-
-``` powershell
-git switch usuario-service
-# Realizar cambios en usuario-service-sanaesencia/
-git add .
-git commit -m "Describe el cambio realizado"
-git push
-```
-
-Para integrar cambios, primero se debe revisar la rama y luego realizar
-el merge o pull request correspondiente. No se deben mezclar
-directamente las ramas de desarrollo entre sí.
-
-## Estado del proyecto
-
-Los cuatro proyectos han superado la compilación con Maven y se ha
-comprobado el inicio de los servicios y la creación de sus bases de
-datos locales. El registro de un cliente en `usuario-service` también se
-probó mediante Swagger.
-
-La integración completa entre los microservicios y la aplicación
-Android, así como las pruebas funcionales exhaustivas de todos los
-endpoints y de la comunicación entre servicios, forman parte de las
-siguientes etapas de desarrollo.
-
-------------------------------------------------------------------------
-
-**SanaEsencia --- Backend de microservicios**
+## Decisiones y límites conocidos
+- La app está orientada a clientes: no se exponen endpoints administrativos para escritura de servicios ni profesionales.
+- Los GET de servicios y profesionales son públicos para permitir explorar la oferta antes de iniciar sesión.
+- Las reservas se vinculan al correo extraído del JWT; el cliente solo puede consultar/cancelar sus propias reservas.
+- Reserva consulta Servicios y Profesionales por HTTP antes de persistir, y valida especialidad, modalidad y estado de agenda.
+- Los horarios de atención y disponibilidad granular por bloques todavía no están modelados; se evita doble reserva por solapamiento entre reservas persistidas, pero no se genera un calendario completo de disponibilidad.
+- La cancelación requiere 12 horas de anticipación.
+- `ddl-auto=update` es apropiado para esta demo; para producción debe migrarse a Flyway/Liquibase y endurecer credenciales, CORS, rate limiting, logs y políticas de despliegue.
+- El modelo `ProfesionalResponse` mantiene `especialidadesIds`; el modelo `ServicioResponse` usa `especialidadId`, `duracionMinutos`.

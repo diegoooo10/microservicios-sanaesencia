@@ -1,3 +1,4 @@
+
 package com.sanaesencia.usuario.security;
 
 import java.io.IOException;
@@ -28,28 +29,43 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
+            FilterChain chain
+    ) throws ServletException, IOException {
 
-        String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String header = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
+        if (header != null && header.startsWith("Bearer ")) {
+            try {
+                var claims = jwtService.validateAndGetClaims(
+                        header.substring(7)
+                );
+
+                Long userId = Long.parseLong(claims.getSubject());
+                String role = claims.get("rol", String.class);
+
+                if (userId > 0 && role != null
+                        && SecurityContextHolder.getContext().getAuthentication() == null) {
+
+                    var authorities = List.of(
+                            new SimpleGrantedAuthority("ROLE_" + role)
+                    );
+
+                    var authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    userId,
+                                    null,
+                                    authorities
+                            );
+
+                    SecurityContextHolder.getContext()
+                            .setAuthentication(authentication);
+                }
+
+            } catch (RuntimeException exception) {
+                SecurityContextHolder.clearContext();
+            }
         }
 
-        String token = authorization.substring(7);
-
-        if (jwtService.esTokenValido(token)
-                && SecurityContextHolder.getContext().getAuthentication() == null) {
-            String correo = jwtService.extraerCorreo(token);
-
-            String rol = jwtService.extraerRol(token);
-            
-            var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + rol));
-            var authentication = new UsernamePasswordAuthenticationToken(correo, null, authorities);
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-        }
-
-        filterChain.doFilter(request, response);
+        chain.doFilter(request, response);
     }
 }

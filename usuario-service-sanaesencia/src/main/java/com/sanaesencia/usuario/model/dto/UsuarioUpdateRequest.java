@@ -1,32 +1,28 @@
+
 package com.sanaesencia.usuario.model.dto;
 
-import java.time.LocalDate;
-
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 public record UsuarioUpdateRequest(
-        @NotBlank(message = "El nombre es obligatorio")
-        @Size(max = 80)
-        String nombre,
 
-        @NotBlank(message = "El apellido es obligatorio")
-        @Size(max = 80)
-        String apellido,
+        @Email(message = "El correo electrónico no tiene un formato válido")
+        @Size(max = 150, message = "El correo no puede superar los 150 caracteres")
+        String correo,
 
-        @NotBlank(message = "El teléfono es obligatorio")
-        @Size(max = 25)
-        String telefono,
+        @Size(max = 200, message = "La dirección no puede superar los 200 caracteres")
+        @Pattern(
+                regexp = ".*\\S.*",
+                message = "La dirección no puede estar vacía"
+        )
+        String direccion,
 
-        @NotNull(message = "La fecha de nacimiento es obligatoria")
-        @Past(message = "La fecha de nacimiento debe ser anterior a hoy")
-        LocalDate fechaNacimiento,
+        @Pattern(
+                regexp = "^\\+?[0-9 ()-]{8,20}$",
+                message = "El teléfono no tiene un formato válido"
+        )
+        String telefono
 
-        @Size(max = 100)
-        String ciudad,
-
-        @NotBlank(message = "El correo es obligatorio")
-        @Email(message = "El correo debe tener un formato válido")
-        @Size(max = 150)
-        String correo
 ) {
 }

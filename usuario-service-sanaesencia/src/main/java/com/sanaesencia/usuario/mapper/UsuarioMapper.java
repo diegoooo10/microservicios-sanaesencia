@@ -1,45 +1,42 @@
+
 package com.sanaesencia.usuario.mapper;
 
 import org.springframework.stereotype.Component;
 
 import com.sanaesencia.usuario.model.dto.UsuarioRequest;
 import com.sanaesencia.usuario.model.dto.UsuarioResponse;
-import com.sanaesencia.usuario.model.dto.UsuarioUpdateRequest;
 import com.sanaesencia.usuario.model.entity.Usuario;
 
 @Component
 public class UsuarioMapper {
 
     public Usuario toEntity(UsuarioRequest request) {
+
         Usuario usuario = new Usuario();
+
         usuario.setNombre(request.nombre());
         usuario.setApellido(request.apellido());
-        usuario.setTelefono(request.telefono());
-        usuario.setFechaNacimiento(request.fechaNacimiento());
-        usuario.setCiudad(request.ciudad());
         usuario.setCorreo(request.correo().trim().toLowerCase());
+        usuario.setRun(request.run().trim());
+        usuario.setFechaNacimiento(request.fechaNacimiento());
+        usuario.setDireccion(request.direccion());
+        usuario.setTelefono(request.telefono());
+
         return usuario;
     }
 
     public UsuarioResponse toResponse(Usuario usuario) {
+
         return new UsuarioResponse(
                 usuario.getId(),
                 usuario.getNombre(),
                 usuario.getApellido(),
-                usuario.getTelefono(),
-                usuario.getFechaNacimiento(),
-                usuario.getCiudad(),
                 usuario.getCorreo(),
-                usuario.getRol()
+                usuario.getRun(),
+                usuario.getFechaNacimiento(),
+                usuario.getDireccion(),
+                usuario.getTelefono(),
+                usuario.getRol().name()
         );
-    }
-
-    public void actualizarPerfil(UsuarioUpdateRequest request, Usuario usuario) {
-        usuario.setNombre(request.nombre());
-        usuario.setApellido(request.apellido());
-        usuario.setTelefono(request.telefono());
-        usuario.setFechaNacimiento(request.fechaNacimiento());
-        usuario.setCiudad(request.ciudad());
-        usuario.setCorreo(request.correo().trim().toLowerCase());
     }
 }

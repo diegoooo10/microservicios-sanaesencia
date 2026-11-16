@@ -1,3 +1,4 @@
+
 package com.sanaesencia.usuario.security;
 
 import java.time.Instant;
@@ -23,46 +24,35 @@ public class JwtService {
 
     public JwtService(
             @Value("${app.jwt.secret}") String secret,
-            @Value("${app.jwt.expiration-ms}") long expirationMs) {
-        this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
+            @Value("${app.jwt.expiration-ms}") long expirationMs
+    ) {
+        this.signingKey = Keys.hmacShaKeyFor(
+                Decoders.BASE64.decode(secret)
+        );
         this.expirationMs = expirationMs;
     }
 
-    public String generarToken(Usuario usuario) {
-        Instant ahora = Instant.now();
+    public String generateToken(Usuario usuario) {
+        Instant now = Instant.now();
 
         return Jwts.builder()
-                .subject(usuario.getCorreo())
+                .subject(usuario.getId().toString())
                 .claim("rol", usuario.getRol().name())
-                .issuedAt(Date.from(ahora))
-                .expiration(Date.from(ahora.plusMillis(expirationMs)))
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plusMillis(expirationMs)))
                 .signWith(signingKey)
                 .compact();
     }
 
-    public String extraerCorreo(String token) {
-        return extraerClaims(token).getSubject();
-    }
-
-    public boolean esTokenValido(String token) {
-        try {
-            Claims claims = extraerClaims(token);
-            return claims.getSubject() != null
-                    && claims.getExpiration() != null
-                    && claims.getExpiration().after(new Date());
-        } catch (RuntimeException ex) {
-            return false;
-        }
-    }
-
-    private Claims extraerClaims(String token) {
+    public Claims validateAndGetClaims(String token) {
         return Jwts.parser()
                 .verifyWith(signingKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
     }
-    public String extraerRol(String token) {
-        return extraerClaims(token).get("rol", String.class);
+
+    public long getExpirationMs() {
+        return expirationMs;
     }
 }
