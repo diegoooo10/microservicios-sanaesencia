@@ -20,10 +20,6 @@ public record UsuarioRequest(
         @Size(max = 150)
         String correo,
 
-        @NotBlank
-        @Size(max = 20)
-        String run,
-
         @NotNull
         @Past
         LocalDate fechaNacimiento,

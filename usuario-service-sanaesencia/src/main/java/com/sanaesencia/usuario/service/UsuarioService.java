@@ -43,12 +43,6 @@ public class UsuarioService {
             );
         }
 
-        if (repository.existsByRun(request.run().trim())) {
-            throw new IllegalArgumentException(
-                    "El RUN ya está registrado"
-            );
-        }
-
         Usuario usuario = mapper.toEntity(request);
 
         usuario.setPassword(

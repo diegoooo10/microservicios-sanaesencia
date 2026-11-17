@@ -34,7 +34,7 @@ public class UsuarioController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Cliente registrado"),
             @ApiResponse(responseCode = "400", description = "Datos inválidos"),
-            @ApiResponse(responseCode = "409", description = "Correo o RUN duplicado")
+            @ApiResponse(responseCode = "409", description = "Correo electrónico")
     })
     public UsuarioResponse registrar(
             @Valid @RequestBody UsuarioRequest request

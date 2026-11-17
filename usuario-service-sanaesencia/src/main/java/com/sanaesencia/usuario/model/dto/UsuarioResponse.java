@@ -8,7 +8,6 @@ public record UsuarioResponse(
         String nombre,
         String apellido,
         String correo,
-        String run,
         LocalDate fechaNacimiento,
         String direccion,
         String telefono,

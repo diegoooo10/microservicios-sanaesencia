@@ -17,7 +17,6 @@ public class UsuarioMapper {
         usuario.setNombre(request.nombre());
         usuario.setApellido(request.apellido());
         usuario.setCorreo(request.correo().trim().toLowerCase());
-        usuario.setRun(request.run().trim());
         usuario.setFechaNacimiento(request.fechaNacimiento());
         usuario.setDireccion(request.direccion());
         usuario.setTelefono(request.telefono());
@@ -32,7 +31,6 @@ public class UsuarioMapper {
                 usuario.getNombre(),
                 usuario.getApellido(),
                 usuario.getCorreo(),
-                usuario.getRun(),
                 usuario.getFechaNacimiento(),
                 usuario.getDireccion(),
                 usuario.getTelefono(),

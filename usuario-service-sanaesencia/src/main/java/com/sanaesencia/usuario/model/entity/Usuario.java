@@ -24,9 +24,6 @@ public class Usuario {
     @Column(nullable = false, unique = true, length = 150)
     private String correo;
 
-    @Column(nullable = false, unique = true, length = 20)
-    private String run;
-
     @Column(nullable = false)
     private LocalDate fechaNacimiento;
 
@@ -53,9 +50,6 @@ public class Usuario {
 
     public String getCorreo() { return correo; }
     public void setCorreo(String correo) { this.correo = correo; }
-
-    public String getRun() { return run; }
-    public void setRun(String run) { this.run = run; }
 
     public LocalDate getFechaNacimiento() { return fechaNacimiento; }
     public void setFechaNacimiento(LocalDate fechaNacimiento) {
