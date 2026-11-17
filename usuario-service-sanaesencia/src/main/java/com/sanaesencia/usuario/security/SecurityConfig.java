@@ -33,12 +33,15 @@ public class SecurityConfig {
                                 "/v3/api-docs/**"
                         ).permitAll()
 
-                        // Registro y login públicos
+                        
+                        // Registro, login y recuperación de contraseña públicos
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/usuarios/registro",
-                                "/api/usuarios/login"
+                                "/api/usuarios/login",
+                                "/api/usuarios/password/recuperacion"
                         ).permitAll()
+
 
                         // Consultar perfil propio
                         .requestMatchers(

@@ -20,17 +20,20 @@ public class UsuarioService {
     private final UsuarioMapper mapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final EmailService emailService;
 
     public UsuarioService(
             UsuarioRepository repository,
             UsuarioMapper mapper,
             PasswordEncoder passwordEncoder,
-            JwtService jwtService
+            JwtService jwtService,
+            EmailService emailService
     ) {
         this.repository = repository;
         this.mapper = mapper;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.emailService = emailService;
     }
 
     public UsuarioResponse registrar(UsuarioRequest request) {
@@ -145,4 +148,25 @@ public class UsuarioService {
 
         return mapper.toResponse(repository.save(usuario));
     }
+
+
+        public void solicitarRecuperacion(String correo) {
+
+                String correoNormalizado = correo.trim().toLowerCase();
+
+                repository.findByCorreo(correoNormalizado)
+                        .ifPresent(usuario -> {
+
+                                String token = jwtService.generatePasswordResetToken(usuario);
+
+                                String enlace = "https://sanaesencia-app.duckdns.org/"
+                                        + "reset-password?token=" + token;
+
+                                emailService.enviarRecuperacion(
+                                        usuario.getCorreo(),
+                                        enlace
+                                );
+                        });
+                }
+
 }

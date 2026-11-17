@@ -21,15 +21,18 @@ public class JwtService {
 
     private final SecretKey signingKey;
     private final long expirationMs;
+    private final long passwordResetMs;
 
     public JwtService(
             @Value("${app.jwt.secret}") String secret,
-            @Value("${app.jwt.expiration-ms}") long expirationMs
+            @Value("${app.jwt.expiration-ms}") long expirationMs,
+            @Value("${app.jwt.password-reset-ms}") long passwordResetMs
     ) {
         this.signingKey = Keys.hmacShaKeyFor(
                 Decoders.BASE64.decode(secret)
         );
         this.expirationMs = expirationMs;
+        this.passwordResetMs = passwordResetMs;
     }
 
     public String generateToken(Usuario usuario) {
@@ -43,6 +46,37 @@ public class JwtService {
                 .signWith(signingKey)
                 .compact();
     }
+
+
+    public String generatePasswordResetToken(Usuario usuario) {
+        Instant now = Instant.now();
+
+        return Jwts.builder()
+                .subject(usuario.getId().toString())
+                .claim("purpose", "password_reset")
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plusMillis(passwordResetMs)))
+                .signWith(signingKey)
+                .compact();
+    }
+
+
+    public Long validatePasswordResetToken(String token) {
+
+        Claims claims = validateAndGetClaims(token);
+
+        String purpose = claims.get("purpose", String.class);
+
+        if (!"password_reset".equals(purpose)) {
+            throw new IllegalArgumentException(
+                    "Token de recuperación inválido"
+            );
+        }
+
+        return Long.parseLong(claims.getSubject());
+    }
+
+
 
     public Claims validateAndGetClaims(String token) {
         return Jwts.parser()

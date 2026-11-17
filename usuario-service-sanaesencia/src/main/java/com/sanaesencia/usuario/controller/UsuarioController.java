@@ -95,4 +95,24 @@ public class UsuarioController {
 
         return ResponseEntity.ok(actualizado);
     }
+
+
+
+@PostMapping("/password/recuperacion")
+@Operation(summary = "Solicitar recuperación de contraseña por correo")
+@ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Solicitud procesada"),
+        @ApiResponse(responseCode = "400", description = "Correo inválido")
+})
+public ResponseEntity<String> solicitarRecuperacion(
+        @Valid @RequestBody RecuperacionPasswordRequest request
+) {
+    service.solicitarRecuperacion(request.correo());
+
+    return ResponseEntity.ok(
+            "Si el correo está registrado, recibirás un enlace de recuperación."
+    );
+}
+
+
 }
