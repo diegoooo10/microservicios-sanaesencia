@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import io.jsonwebtoken.JwtException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -41,4 +42,10 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(status).body(body);
     }
+
+        @ExceptionHandler(JwtException.class)
+        public ResponseEntity<ApiError> handleJwtException(JwtException exception,HttpServletRequest request) {
+    
+        return build(HttpStatus.BAD_REQUEST, "El enlace de recuperación es inválido o ha expirado", request);
+        }
 }

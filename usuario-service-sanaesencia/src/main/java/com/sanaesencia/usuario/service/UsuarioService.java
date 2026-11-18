@@ -169,4 +169,30 @@ public class UsuarioService {
                         });
                 }
 
+        public void restablecerPassword(String token, String nuevaPassword) {
+
+        // Validar el JWT y obtener el ID del usuario
+        Long usuarioId = Long.parseLong(
+                jwtService.validateAndGetClaims(token).getSubject()
+        );
+
+        // Buscar al usuario en la base de datos
+        Usuario usuario = repository.findWithLockById(usuarioId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Token de recuperación inválido"
+                        )
+                );
+
+        // Validar finalidad, identidad y huella de la contraseña
+        jwtService.validatePasswordResetToken(token, usuario);
+
+        // Cifrar y guardar la nueva contraseña
+        usuario.setPassword(
+                passwordEncoder.encode(nuevaPassword)
+        );
+
+        repository.save(usuario);
+        }
+
 }

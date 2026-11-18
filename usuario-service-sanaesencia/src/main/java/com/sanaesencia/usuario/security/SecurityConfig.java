@@ -39,7 +39,8 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/api/usuarios/registro",
                                 "/api/usuarios/login",
-                                "/api/usuarios/password/recuperacion"
+                                "/api/usuarios/password/recuperacion",
+                                "/api/usuarios/password/restablecer"
                         ).permitAll()
 
 

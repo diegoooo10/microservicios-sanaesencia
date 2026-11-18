@@ -114,5 +114,25 @@ public ResponseEntity<String> solicitarRecuperacion(
     );
 }
 
+@PostMapping("/password/restablecer")
+@Operation(summary = "Restablecer contraseña mediante token de recuperación")
+@ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Contraseña actualizada"),
+        @ApiResponse(responseCode = "400", description = "Token inválido o datos incorrectos")
+})
+public ResponseEntity<String> restablecerPassword(
+        @Valid @RequestBody RestablecerPasswordRequest request
+) {
+
+    service.restablecerPassword(
+            request.token(),
+            request.nuevaPassword()
+    );
+
+    return ResponseEntity.ok(
+            "Contraseña restablecida correctamente."
+    );
+}
+
 
 }
