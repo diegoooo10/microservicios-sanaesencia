@@ -2,6 +2,8 @@
 package com.sanaesencia.reserva.controller;
 
 import java.net.URI;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 import org.springframework.http.HttpHeaders;
@@ -103,4 +105,27 @@ public class ReservaController {
                 service.cancelar(id, userId)
         );
     }
+
+        @GetMapping("/disponibilidad")
+        @Operation(summary = "Consultar horarios disponibles para una prestación")
+        public List<LocalTime> obtenerHorariosDisponibles(
+                HttpServletRequest request,
+                @RequestParam Long profesionalId,
+                @RequestParam Long servicioId,
+                @RequestParam LocalDate fecha,
+                @RequestParam String modalidad
+        ) {
+
+        String authorizationHeader = request.getHeader(
+                HttpHeaders.AUTHORIZATION
+        );
+
+        return service.obtenerHorariosDisponibles(
+                profesionalId,
+                servicioId,
+                fecha,
+                modalidad,
+                authorizationHeader
+        );
+        }
 }
