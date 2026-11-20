@@ -48,4 +48,16 @@ public class GlobalExceptionHandler {
     
         return build(HttpStatus.BAD_REQUEST, "El enlace de recuperación es inválido o ha expirado", request);
         }
+
+        @ExceptionHandler(CredencialesInvalidasException.class)
+public ResponseEntity<ApiError> handleCredencialesInvalidas(
+        CredencialesInvalidasException exception,
+        HttpServletRequest request
+) {
+    return build(
+            HttpStatus.UNAUTHORIZED,
+            exception.getMessage(),
+            request
+    );
+}
 }

@@ -11,6 +11,7 @@ import com.sanaesencia.usuario.model.entity.Usuario;
 import com.sanaesencia.usuario.model.enums.Rol;
 import com.sanaesencia.usuario.repository.UsuarioRepository;
 import com.sanaesencia.usuario.security.JwtService;
+import com.sanaesencia.usuario.exception.CredencialesInvalidasException;
 
 @Service
 @Transactional
@@ -59,29 +60,29 @@ public class UsuarioService {
 
     public LoginResponse iniciarSesion(LoginRequest request) {
 
-        Usuario usuario = repository.findByCorreo(
-                request.correo().trim().toLowerCase()
-        ).orElseThrow(() ->
-                new IllegalArgumentException("Credenciales inválidas")
-        );
+    Usuario usuario = repository.findByCorreo(
+            request.correo().trim().toLowerCase()
+    ).orElseThrow(() ->
+            new CredencialesInvalidasException("Credenciales inválidas")
+    );
 
-        if (!passwordEncoder.matches(
-                request.password(),
-                usuario.getPassword()
-        )) {
-            throw new IllegalArgumentException(
-                    "Credenciales inválidas"
-            );
-        }
-
-        return new LoginResponse(
-                jwtService.generateToken(usuario),
-                "Bearer",
-                usuario.getCorreo(),
-                usuario.getRol().name(),
-                jwtService.getExpirationMs()
+    if (!passwordEncoder.matches(
+            request.password(),
+            usuario.getPassword()
+    )) {
+        throw new CredencialesInvalidasException(
+                "Credenciales inválidas"
         );
     }
+
+    return new LoginResponse(
+            jwtService.generateToken(usuario),
+            "Bearer",
+            usuario.getCorreo(),
+            usuario.getRol().name(),
+            jwtService.getExpirationMs()
+    );
+}
 
     @Transactional(readOnly = true)
     public UsuarioResponse obtenerPerfil(Long userId) {
