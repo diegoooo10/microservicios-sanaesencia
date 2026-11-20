@@ -2,6 +2,7 @@
 package com.sanaesencia.reserva.model.entity;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 import com.sanaesencia.reserva.model.enums.EstadoReserva;
@@ -59,6 +60,9 @@ public class Reserva {
     @Column(nullable = false)
     private Integer duracionMinutos;
 
+    @Column(name = "fecha_expiracion_pago")
+    private LocalDateTime fechaExpiracionPago;
+
     public Long getId() { return id; }
 
     public Long getUsuarioId() { return usuarioId; }
@@ -93,4 +97,9 @@ public class Reserva {
 
     public Integer getDuracionMinutos() { return duracionMinutos; }
     public void setDuracionMinutos(Integer v) { duracionMinutos = v; }
+
+    public LocalDateTime getFechaExpiracionPago() { return fechaExpiracionPago;}
+
+     public void setFechaExpiracionPago(LocalDateTime fechaExpiracionPago) {
+         this.fechaExpiracionPago = fechaExpiracionPago; }
 }

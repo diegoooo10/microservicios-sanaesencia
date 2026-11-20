@@ -2,6 +2,7 @@
 package com.sanaesencia.reserva.repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,5 +24,10 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     Optional<Reserva> findByIdAndUsuarioId(
             Long id,
             Long usuarioId
+    );
+
+    List<Reserva> findByEstadoAndFechaExpiracionPagoLessThanEqual(
+            EstadoReserva estado,
+            LocalDateTime fechaExpiracionPago
     );
 }

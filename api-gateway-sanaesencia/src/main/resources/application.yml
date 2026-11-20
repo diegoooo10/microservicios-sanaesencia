@@ -36,6 +36,12 @@ spring:
               predicates:
                 - Path=/api/reservas,/api/reservas/**
 
+            # Microservicio de Pagos
+            - id: pago-service
+              uri: http://pago-service:8085
+              predicates:
+                - Path=/api/pagos,/api/pagos/**
+
 management:
   endpoints:
     web:

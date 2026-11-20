@@ -71,6 +71,24 @@ services:
     networks:
       - sanaesencia-network
 
+
+  mysql-pagos:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: sanaesencia_pagos
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    volumes:
+      - mysql_pagos_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    networks:
+      - sanaesencia-network
+
+
   # ==========================================
   # MICROSERVICIO USUARIOS
   # ==========================================
@@ -131,6 +149,25 @@ services:
     networks:
       - sanaesencia-network
 
+
+  # ==========================================
+  # MICROSERVICIO PAGOS
+  # ==========================================
+
+  pago-service:
+    build: ./pago-service-sanaesencia
+    depends_on:
+      mysql-pagos:
+        condition: service_healthy
+      reserva-service:
+        condition: service_started
+    ports:
+      - "127.0.0.1:8085:8085"
+    networks:
+      - sanaesencia-network
+
+
+
   # ==========================================
   # API GATEWAY
   # ==========================================
@@ -146,10 +183,13 @@ services:
         condition: service_started
       reserva-service:
         condition: service_started
+      pago-service:
+        condition: service_started
     ports:
       - "8080:8080"
     networks:
       - sanaesencia-network
+
 
 # ==========================================
 # RED
@@ -168,3 +208,4 @@ volumes:
   mysql_servicios_data:
   mysql_profesionales_data:
   mysql_reservas_data:
+  mysql_pagos_data:

@@ -17,6 +17,8 @@ import com.sanaesencia.reserva.model.enums.EstadoReserva;
 import com.sanaesencia.reserva.repository.ReservaRepository;
 import com.sanaesencia.reserva.model.entity.HorarioAtencion;
 import com.sanaesencia.reserva.repository.HorarioAtencionRepository;
+import com.sanaesencia.reserva.client.PagoClient;
+
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -30,18 +32,21 @@ public class ReservaService {
     private final ReservaRepository repository;
     private final ProfesionalClient profesionalClient;
     private final ServicioClient servicioClient;
+    private final PagoClient pagoClient;
     private final HorarioAtencionRepository horarioAtencionRepository;
 
     public ReservaService(
             ReservaRepository repository,
             ProfesionalClient profesionalClient,
             ServicioClient servicioClient,
-            HorarioAtencionRepository horarioAtencionRepository
+            HorarioAtencionRepository horarioAtencionRepository,
+            PagoClient pagoClient
     ) {
         this.repository = repository;
         this.profesionalClient = profesionalClient;
         this.servicioClient = servicioClient;
         this.horarioAtencionRepository = horarioAtencionRepository;
+        this.pagoClient = pagoClient;
     }
 
     public Reserva crear(
@@ -118,7 +123,9 @@ public class ReservaService {
                 repository.findByProfesionalIdAndFechaAndEstadoIn(
                         profesional.id(),
                         request.fecha(),
-                        List.of(EstadoReserva.CONFIRMADA)
+                        List.of(EstadoReserva.CONFIRMADA,
+                                EstadoReserva.PENDIENTE_PAGO,
+                                EstadoReserva.PENDIENTE_CANCELACION)
                 );
 
                 // Validar que la reserva esté dentro de la jornada
@@ -176,7 +183,8 @@ public class ReservaService {
         reserva.setHora(request.hora());
         reserva.setModalidad(request.modalidad());
         reserva.setDuracionMinutos(servicio.duracionMinutos());
-        reserva.setEstado(EstadoReserva.CONFIRMADA);
+        reserva.setEstado(EstadoReserva.PENDIENTE_PAGO);
+        reserva.setFechaExpiracionPago(LocalDateTime.now().plusMinutes(15));
 
         return repository.save(reserva);
     }
@@ -227,6 +235,32 @@ public class ReservaService {
 
         return repository.save(reserva);
     }
+
+
+        public Reserva confirmarPago(Long reservaId) {
+
+        Reserva reserva = repository.findById(reservaId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Reserva no encontrada"
+                ));
+
+        // Permitir que una confirmación repetida sea segura.
+        if (reserva.getEstado() == EstadoReserva.CONFIRMADA) {
+                return reserva;
+        }
+
+        if (reserva.getEstado() != EstadoReserva.PENDIENTE_PAGO) {
+                throw new IllegalStateException(
+                        "La reserva no está pendiente de pago"
+                );
+        }
+
+        reserva.setEstado(EstadoReserva.CONFIRMADA);
+        reserva.setFechaExpiracionPago(null);
+
+        return repository.save(reserva);
+        }
+
 
 
     @Transactional(readOnly = true)
@@ -297,8 +331,9 @@ public class ReservaService {
                 repository.findByProfesionalIdAndFechaAndEstadoIn(
                         profesionalId,
                         fecha,
-                        List.of(EstadoReserva.CONFIRMADA)
-                );
+                        List.of(EstadoReserva.CONFIRMADA,
+                                EstadoReserva.PENDIENTE_PAGO,
+                                EstadoReserva.PENDIENTE_CANCELACION));
 
         // 7. Generar horarios disponibles
         List<LocalTime> disponibles = new ArrayList<>();
@@ -355,5 +390,25 @@ public class ReservaService {
                 .sorted()
                 .toList();
     }
+
+    public PagoClient.InicioResponse iniciarPago(Long reservaId, Long usuarioId) {
+
+    Reserva reserva = obtenerPropia(reservaId, usuarioId);
+
+    if (reserva.getEstado() != EstadoReserva.PENDIENTE_PAGO) {
+        throw new IllegalStateException(
+                "La reserva no está pendiente de pago"
+        );
+    }
+
+    if (reserva.getFechaExpiracionPago() == null
+            || !reserva.getFechaExpiracionPago().isAfter(LocalDateTime.now())) {
+        throw new IllegalStateException(
+                "El tiempo disponible para pagar esta reserva ha expirado"
+        );
+    }
+
+    return pagoClient.crear(reservaId, usuarioId);
+}
 
 }

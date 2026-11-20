@@ -23,6 +23,8 @@ import com.sanaesencia.reserva.mapper.ReservaMapper;
 import com.sanaesencia.reserva.model.entity.Reserva;
 import com.sanaesencia.reserva.service.ReservaService;
 
+import com.sanaesencia.reserva.client.PagoClient;
+
 @RestController
 @RequestMapping("/api/reservas")
 @SecurityRequirement(name = "Bearer Authentication")
@@ -128,4 +130,17 @@ public class ReservaController {
                 authorizationHeader
         );
         }
+
+
+        @PostMapping("/{id}/pago")
+        @Operation(summary = "Iniciar el pago de una reserva propia mediante Webpay")
+        public PagoClient.InicioResponse iniciarPago(
+                Authentication authentication,
+                @PathVariable Long id
+        ) {
+        Long userId = (Long) authentication.getPrincipal();
+
+        return service.iniciarPago(id, userId);
+        }
+
 }
