@@ -94,7 +94,7 @@ public class PagoService {
 
 
     // Valida el retorno interrumpido y procesa el resultado del pago.
-    public PagoResponse validarRetornoInterrumpido(String ordenCompra, String idSesion) throws Exception {
+    public PagoResponse validarRetornoInterrumpido(String tbkToken, String ordenCompra, String idSesion) throws Exception {
         Pago pago = pagos.findByOrdenCompra(ordenCompra)
                 .orElseThrow(() -> new NoSuchElementException("Orden de compra desconocida"));
 
@@ -102,8 +102,8 @@ public class PagoService {
             throw new IllegalStateException("La sesión no corresponde a la reserva");
         }
 
-        if (pago.getToken() == null || pago.getToken().isBlank()) {
-            throw new IllegalStateException("El pago no tiene un token válido");
+        if (pago.getToken() == null || !pago.getToken().equals(tbkToken)) {
+            throw new IllegalStateException("No pudimos validar la información de tu pago. Por favor, intenta nuevamente.");
         }
 
         return anularPago(pago.getToken());
@@ -269,9 +269,9 @@ public class PagoService {
             throw new IllegalStateException("La transacción figura como autorizada en Transbank");
         }
 
-        if (!"FAILED".equals(estadoWebpay)) {
+        if (!"INITIALIZED".equals(estadoWebpay) && !"FAILED".equals(estadoWebpay)) {
             throw new IllegalStateException(
-                    "La transacción todavía no tiene un resultado definitivo de fallo");
+            "La transacción no puede anularse porque su estado no corresponde a una interrupción");
         }
 
         pago.setEstado(EstadoPago.ANULADO);

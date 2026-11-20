@@ -44,39 +44,45 @@ public class PagoController {
     }
 
 
-    // Procesa los retornos normales e interrumpidos de Webpay.
-    @RequestMapping(value = "/webpay/retorno", method = {RequestMethod.GET, RequestMethod.POST})
-    public ResponseEntity<String> retorno(@RequestParam Map<String, String> params) throws Exception {
-        String token = params.get("token_ws");
+    
+// Procesa los retornos normales e interrumpidos de Webpay.
+@RequestMapping(value = "/webpay/retorno", method = {RequestMethod.GET, RequestMethod.POST})
+public ResponseEntity<String> retorno(@RequestParam Map<String, String> params) throws Exception {
+    String token = params.get("token_ws");
 
-        if (token != null && !token.isBlank()) {
-            PagoResponse pago = service.confirmar(token);
+    // Retorno normal: Webpay entrega el token de la transacción.
+    if (token != null && !token.isBlank()) {
+        PagoResponse pago = service.confirmar(token);
 
-            return ResponseEntity.ok(
-                    "Estado del pago: " + pago.estado()
-                    + ". Vuelve a SanaEsencia para consultar tu reserva."
-            );
-        }
-
-        String tbkToken = params.get("TBK_TOKEN");
-        String ordenCompra = params.get("TBK_ORDEN_COMPRA");
-        String idSesion = params.get("TBK_ID_SESION");
-
-        if (tbkToken != null && !tbkToken.isBlank()
-                && ordenCompra != null && !ordenCompra.isBlank()
-                && idSesion != null && !idSesion.isBlank()) {
-
-            PagoResponse pago = service.validarRetornoInterrumpido(ordenCompra, idSesion);
-
-            return ResponseEntity.ok(
-                    "Estado del pago: " + pago.estado()
-                    + ". Vuelve a SanaEsencia para consultar tu reserva."
-            );
-        }
-
-        return ResponseEntity.badRequest()
-                .body("No se pudo identificar el retorno de Webpay.");
+        return ResponseEntity.ok(
+                "Estado del pago: " + pago.estado()
+                + ". Vuelve a SanaEsencia para consultar tu reserva."
+        );
     }
+
+    // Retorno interrumpido: Webpay entrega los datos TBK.
+    String tbkToken = params.get("TBK_TOKEN");
+    String ordenCompra = params.get("TBK_ORDEN_COMPRA");
+    String idSesion = params.get("TBK_ID_SESION");
+
+    if (tbkToken != null && !tbkToken.isBlank()
+            && ordenCompra != null && !ordenCompra.isBlank()
+            && idSesion != null && !idSesion.isBlank()) {
+
+        PagoResponse pago = service.validarRetornoInterrumpido(
+                tbkToken, ordenCompra, idSesion
+        );
+
+        return ResponseEntity.ok(
+                "Estado del pago: " + pago.estado()
+                + ". Vuelve a SanaEsencia para consultar tu reserva."
+        );
+    }
+
+    return ResponseEntity.badRequest()
+            .body("No se pudo identificar el retorno de Webpay.");
+}
+
 
 
     // Solicita la devolución de un pago.
