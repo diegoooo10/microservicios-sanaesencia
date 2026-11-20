@@ -6,5 +6,6 @@ public enum EstadoPago {
     RECHAZADO,
     DEVOLUCION_PENDIENTE,
     DEVUELTO,
-    REVISION_MANUAL
+    REVISION_MANUAL,
+    ANULADO
 }

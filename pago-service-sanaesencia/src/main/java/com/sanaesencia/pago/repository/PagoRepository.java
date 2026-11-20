@@ -8,7 +8,11 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PagoRepository extends JpaRepository<Pago, Long> {
+
     Optional<Pago> findByToken(String token);
+    Optional<Pago> findByOrdenCompra(String ordenCompra);
+
     List<Pago> findByReservaIdOrderByIdDesc(Long reservaId);
+
     boolean existsByReservaIdAndEstado(Long reservaId, EstadoPago estado);
 }

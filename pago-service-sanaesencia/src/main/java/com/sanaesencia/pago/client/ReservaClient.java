@@ -29,4 +29,14 @@ public class ReservaClient {
                 .retrieve()
                 .toBodilessEntity();
     }
+
+
+    public void noConcretarPago(Long reservaId) {
+        restClient.patch()
+                .uri("/api/interno/reservas/{id}/no-concretada", reservaId)
+                .header("X-Internal-Key", internalKey)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
 }

@@ -31,4 +31,15 @@ public class ReservaInternaController {
                 mapper.toResponse(service.confirmarPago(id))
         );
     }
+
+
+    @PatchMapping("/{id}/no-concretada")
+    public ResponseEntity<ReservaResponse> noConcretarPago(
+            @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(
+                mapper.toResponse(service.noConcretarPago(id))
+        );
+    }
+
 }

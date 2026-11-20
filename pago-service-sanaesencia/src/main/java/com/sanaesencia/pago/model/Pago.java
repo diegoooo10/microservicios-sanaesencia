@@ -40,6 +40,9 @@ public class Pago {
     @Column(name = "reserva_confirmada", nullable = false)
     private boolean reservaConfirmada = false;
 
+    @Column(name = "reserva_no_concretada", nullable = false)
+    private boolean reservaNoConcretada = false;
+
     @OneToMany(mappedBy = "pago")
     private List<Devolucion> devoluciones = new ArrayList<>();
 
@@ -79,7 +82,15 @@ public class Pago {
     return reservaConfirmada;
 }
 
-public void setReservaConfirmada(boolean reservaConfirmada) {
-    this.reservaConfirmada = reservaConfirmada;
-}
+    public void setReservaConfirmada(boolean reservaConfirmada) {
+        this.reservaConfirmada = reservaConfirmada;
+    }
+
+    public boolean isReservaNoConcretada() {
+        return reservaNoConcretada;
+    }
+
+    public void setReservaNoConcretada(boolean reservaNoConcretada) {
+        this.reservaNoConcretada = reservaNoConcretada;
+    }
 }

@@ -124,9 +124,8 @@ public class ReservaService {
                         profesional.id(),
                         request.fecha(),
                         List.of(EstadoReserva.CONFIRMADA,
-                                EstadoReserva.PENDIENTE_PAGO,
-                                EstadoReserva.PENDIENTE_CANCELACION)
-                );
+                                EstadoReserva.PENDIENTE_PAGO)
+                        );
 
                 // Validar que la reserva esté dentro de la jornada
         DayOfWeek diaSemana = request.fecha().getDayOfWeek();
@@ -262,6 +261,33 @@ public class ReservaService {
         }
 
 
+        public Reserva noConcretarPago(Long reservaId) {
+
+        Reserva reserva = repository.findById(reservaId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Reserva no encontrada"
+                ));
+
+        // Evitar errores si la operación se repite.
+        if (reserva.getEstado() == EstadoReserva.NO_CONCRETADA) {
+                return reserva;
+        }
+
+        // Nunca liberar una reserva confirmada u otro estado.
+        if (reserva.getEstado() != EstadoReserva.PENDIENTE_PAGO) {
+                throw new IllegalStateException(
+                        "La reserva no está pendiente de pago"
+                );
+        }
+
+        reserva.setEstado(EstadoReserva.NO_CONCRETADA);
+        reserva.setFechaExpiracionPago(null);
+
+        return repository.save(reserva);
+        }
+
+
+
 
     @Transactional(readOnly = true)
     public List<LocalTime> obtenerHorariosDisponibles(
@@ -332,8 +358,7 @@ public class ReservaService {
                         profesionalId,
                         fecha,
                         List.of(EstadoReserva.CONFIRMADA,
-                                EstadoReserva.PENDIENTE_PAGO,
-                                EstadoReserva.PENDIENTE_CANCELACION));
+                                EstadoReserva.PENDIENTE_PAGO));
 
         // 7. Generar horarios disponibles
         List<LocalTime> disponibles = new ArrayList<>();
