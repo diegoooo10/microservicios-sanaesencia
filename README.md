@@ -1,117 +1,280 @@
-# SanaEsencia Backend completo - demostración
+# SanaEsencia — Backend de microservicios
 
-Incluye cuatro microservicios independientes y API Gateway:
-- usuario-service-sanaesencia (8081)
-- servicio-service-sanaesencia (8082)
-- profesional-service-sanaesencia (8083)
-- reserva-service-sanaesencia (8084)
-- api-gateway-sanaesencia (8080)
+Backend REST de **SanaEsencia**, una aplicación Android para gestionar usuarios, profesionales, prestaciones, horarios, reservas y pagos de un centro de bienestar.
 
-Stack: Java 21, Spring Boot 4.1.2, Maven, MySQL 8.4, Spring Security, JWT, Springdoc OpenAPI.
+Este backend está desarrollado principalmente con **Java 21 y Spring Boot**, utiliza **MySQL 8.4** para persistencia y se despliega mediante **Docker Compose** en una instancia **Amazon EC2 con Ubuntu**. La aplicación Android, desarrollada con Kotlin y Jetpack Compose, consume sus endpoints mediante Retrofit.
 
-## Ejecutar
-Desde la carpeta que contiene `compose.yaml`:
-```powershell
-docker compose up --build -d
+> **Estado:** MVP funcional en pruebas. La integración con **Webpay Plus** utiliza el **ambiente TEST de Transbank**; no procesa pagos reales.
+
+## Arquitectura
+
+```mermaid
+flowchart TD
+    A[App Android · Retrofit] -->|HTTPS / JSON| P[Proxy inverso]
+    P --> G[API Gateway · 8080]
+    G --> U[Usuario Service · 8081]
+    G --> S[Servicio Service · 8082]
+    G --> PR[Profesional Service · 8083]
+    G --> R[Reserva Service · 8084]
+    G --> PA[Pago Service · 8085]
+    U --> DU[(MySQL usuarios)]
+    S --> DS[(MySQL servicios)]
+    PR --> DP[(MySQL profesionales)]
+    R --> DR[(MySQL reservas)]
+    PA --> DPA[(MySQL pagos)]
+    PA <-->|API TEST| T[Transbank · Webpay Plus]
+```
+
+El **API Gateway** centraliza las solicitudes externas y las deriva al microservicio responsable. Cada servicio de negocio administra su propia base de datos; las referencias entre dominios se gestionan por identificadores y comunicación entre servicios, sin relaciones JPA que crucen sus bases de datos.
+
+## Tecnologías
+
+| Capa | Tecnologías |
+|---|---|
+| Lenguaje y framework | Java 21, Spring Boot, Maven |
+| API | Spring Web, REST, JSON |
+| Persistencia | Spring Data JPA, MySQL 8.4 |
+| Seguridad | Spring Security, JWT, validaciones de entrada |
+| Infraestructura | Docker, Docker Compose, Ubuntu, Amazon EC2 |
+| Acceso externo | API Gateway, dominio DuckDNS, proxy inverso y HTTPS |
+| Integraciones | SMTP para recuperación de contraseña, Transbank Webpay Plus TEST |
+
+## Microservicios
+
+| Componente | Puerto | Responsabilidad |
+|---|---:|---|
+| `api-gateway-sanaesencia` | 8080 | Punto de entrada y enrutamiento |
+| `usuario-service-sanaesencia` | 8081 | Registro, inicio de sesión, JWT, perfil y recuperación de contraseña |
+| `servicio-service-sanaesencia` | 8082 | Especialidades y prestaciones |
+| `profesional-service-sanaesencia` | 8083 | Profesionales, especialidades y modalidades |
+| `reserva-service-sanaesencia` | 8084 | Disponibilidad, creación, consulta y cancelación de reservas |
+| `pago-service-sanaesencia` | 8085 | Transacciones, resultados de pago y sincronización de reservas |
+
+También existe el repositorio `transbank-service-sanaesencia` dentro del trabajo del proyecto. **Su función y despliegue exactos deben verificarse en su código actual antes de documentarlos como un servicio independiente en ejecución.**
+
+> Los puertos indicados corresponden a la configuración de desarrollo/despliegue utilizada en el proyecto. No todos deben exponerse públicamente: el acceso externo debe realizarse a través del proxy y el Gateway.
+
+## Bases de datos
+
+Cada microservicio administra su propio esquema:
+
+| Base de datos | Tablas principales |
+|---|---|
+| `sanaesencia_usuarios` | `usuarios` |
+| `sanaesencia_servicios` | `especialidades`, `servicios` |
+| `sanaesencia_profesionales` | `profesionales`, `profesional_especialidades`, `profesional_modalidades` |
+| `sanaesencia_reservas` | `reservas`, `horarios_atencion` |
+| `sanaesencia_pagos` | `pagos`, `devoluciones` |
+
+La tabla `devoluciones` tiene una clave foránea `pago_id` hacia `pagos`. Los datos de usuarios, reservas y pagos se mantienen separados de los catálogos de profesionales, prestaciones y horarios.
+
+## Funcionalidades implementadas
+
+### Usuarios y autenticación
+
+- Registro con validación de datos personales.
+- Inicio de sesión mediante correo y contraseña.
+- Emisión y validación de JWT para operaciones protegidas.
+- Consulta y actualización del perfil.
+- Recuperación de contraseña por correo electrónico.
+- Enlace de restablecimiento con token de **30 minutos** de vigencia.
+- Manejo de errores HTTP y respuestas comprensibles para el frontend.
+
+### Profesionales y prestaciones
+
+- Consulta de especialidades y prestaciones.
+- Consulta de profesionales y sus especialidades.
+- Modalidades de atención **presencial** y **online**.
+- Consulta de horarios disponibles.
+
+### Reservas
+
+- Creación y consulta de reservas.
+- Confirmación de reservas asociadas a pagos aprobados.
+- Historial de reservas y consulta de estados.
+- Cancelación de reservas confirmadas, conservando su registro como `CANCELADA`.
+- Liberación del horario cuando corresponde.
+- Validación **en el backend** que impide cancelar una reserva confirmada cuando faltan menos de **12 horas** para la atención.
+
+### Pagos
+
+- Inicio de transacciones con Webpay Plus TEST.
+- Verificación del resultado del pago.
+- Sincronización entre el estado del pago y el de la reserva.
+- Manejo de procesos de pago aprobados, rechazados o anulados.
+- Persistencia de pagos y estructura para devoluciones.
+
+> La política de devolución de dinero por cancelación **no está definida** para este MVP y debe acordarse con el cliente. No se debe asumir un reembolso automático.
+
+## Flujo general de una reserva
+
+```mermaid
+sequenceDiagram
+    participant App as Android
+    participant GW as API Gateway
+    participant Res as Reserva Service
+    participant Pag as Pago Service
+    participant TB as Webpay TEST
+    App->>GW: Solicitar disponibilidad
+    GW->>Res: Consultar horarios
+    Res-->>App: Horarios disponibles (vía Gateway)
+    App->>GW: Crear reserva / iniciar pago
+    GW->>Res: Registrar reserva
+    GW->>Pag: Iniciar transacción
+    Pag->>TB: Crear transacción
+    TB-->>App: Flujo de pago
+    TB-->>Pag: Resultado de transacción
+    Pag->>Res: Confirmar reserva si corresponde
+    Res-->>App: Estado actualizado (vía Gateway)
+```
+
+*Diagrama conceptual: las rutas y llamadas concretas deben contrastarse con los controladores y clientes HTTP de cada servicio.*
+
+## Seguridad y criterios de diseño
+
+- **JWT** en las solicitudes autenticadas mediante `Authorization: Bearer <token>`.
+- **DTO** para delimitar los datos recibidos y devueltos por los endpoints.
+- Validaciones de entrada y manejo centralizado de excepciones.
+- Contraseñas almacenadas mediante un algoritmo de hash, no en texto plano.
+- Restricciones de negocio verificadas en el backend, además de reflejarse en Android.
+- Servicios y bases de datos separados por responsabilidad.
+
+No publiques contraseñas, claves de correo, secretos JWT, credenciales de infraestructura, tokens de pago ni archivos `.pem` en los repositorios.
+
+## Organización de repositorios
+
+El backend se ha desarrollado en **repositorios Git independientes**. Una organización local de trabajo puede ser:
+
+```text
+Microservicios/
+├── README.md                      # Documentación general del backend
+├── api-gateway-sanaesencia/
+├── usuario-service-sanaesencia/
+├── servicio-service-sanaesencia/
+├── profesional-service-sanaesencia/
+├── reserva-service-sanaesencia/
+├── pago-service-sanaesencia/
+└── transbank-service-sanaesencia/
+```
+
+**Importante:** el `README.md` ubicado en la carpeta contenedora `Microservicios/` **no aparecerá automáticamente en GitHub** si esa carpeta no es un repositorio propio. Para publicarlo como documentación general, crea un repositorio de infraestructura/documentación, o inclúyelo en el repositorio que contiene el `compose.yaml` del despliegue. Los README específicos de cada microservicio deben vivir en sus respectivos repositorios.
+
+## Requisitos de ejecución
+
+- Java 21 y Maven para compilar los servicios fuera de Docker.
+- Docker Engine y Docker Compose para ejecutar el conjunto.
+- Acceso a los repositorios de los microservicios.
+- Archivo `compose.yaml`/`docker-compose.yml` configurado para el entorno.
+- Configuración de conexión a MySQL, JWT, SMTP y Webpay TEST según corresponda.
+
+La configuración concreta depende de cada repositorio. **Este README no incluye credenciales ni secretos de ejemplo que deban reutilizarse en producción.**
+
+## Ejecución con Docker Compose
+
+Desde el directorio que contiene el archivo Compose:
+
+```bash
+docker compose up -d --build
+```
+
+Comprobar el estado:
+
+```bash
 docker compose ps
 ```
 
-Detener:
-```powershell
+Consultar registros:
+
+```bash
+docker compose logs -f
+```
+
+Reconstruir un servicio modificado (ejemplo):
+
+```bash
+docker compose up -d --build usuario-service
+```
+
+Detener los contenedores sin eliminar volúmenes:
+
+```bash
 docker compose down
 ```
-Los datos persisten en volúmenes. Para reiniciar las bases desde cero (BORRA LOS DATOS):
-```powershell
-docker compose down -v
+
+> **No ejecutar `docker compose down -v` para una detención habitual:** la opción `-v` elimina volúmenes y puede provocar pérdida de datos persistidos.
+
+### Despliegue en AWS
+
+El entorno de pruebas utiliza una instancia EC2 Ubuntu con los contenedores del backend y MySQL. El acceso desde Android se realiza mediante un dominio DuckDNS y un proxy inverso hacia el API Gateway.
+
+Para que los usuarios puedan probar la APK, deben permanecer operativos:
+
+1. La instancia EC2.
+2. Los contenedores de microservicios y bases de datos.
+3. El acceso de red, el dominio y el proxy inverso.
+
+Mantener la instancia encendida genera costos según la configuración de AWS.
+
+## API y documentación de endpoints
+
+Los siguientes endpoints de **usuarios** corresponden a las rutas conocidas del proyecto. Deben validarse contra la versión desplegada si se modifican los controladores o el Gateway.
+
+| Método | Ruta del servicio de usuarios | Función |
+|---|---|---|
+| `POST` | `/api/usuarios/registro` | Registrar usuario |
+| `POST` | `/api/usuarios/login` | Autenticar usuario |
+| `GET` | `/api/usuarios/perfil` | Consultar perfil |
+| `PATCH` | `/api/usuarios/perfil` | Actualizar perfil |
+| `POST` | `/api/usuarios/recuperacion` | Solicitar recuperación |
+| `POST` | `/api/usuarios/nueva-contrasena` | Establecer nueva contraseña |
+
+Ejemplo de inicio de sesión en un entorno local con el Gateway en el puerto 8080:
+
+```bash
+curl -X POST http://localhost:8080/api/usuarios/login \
+  -H "Content-Type: application/json" \
+  -d '{"correo":"usuario@ejemplo.com","password":"TU_CONTRASENA"}'
 ```
 
-## Swagger
-- Usuarios: http://localhost:8081/swagger-ui/index.html
-- Servicios: http://localhost:8082/swagger-ui/index.html
-- Profesionales: http://localhost:8083/swagger-ui/index.html
-- Reservas: http://localhost:8084/swagger-ui/index.html
+Las rutas de servicios, profesionales, reservas y pagos deben documentarse a partir de sus controladores reales; no se inventan aquí nombres de endpoints ni contratos de DTO.
 
-## Gateway
-El gateway enruta:
-- `/api/usuarios/**`
-- `/api/especialidades/**`
-- `/api/servicios/**`
-- `/api/profesionales/**`
-- `/api/reservas/**`
+## Pruebas recomendadas
 
-## Endpoints principales
-### Usuarios
-- POST `/api/usuarios/registro`
-- POST `/api/usuarios/login`
-- GET `/api/usuarios/perfil` (CLIENTE)
-- PATCH `/api/usuarios/perfil` (CLIENTE)
+- Registro de usuarios y validaciones de datos.
+- Login exitoso y credenciales inválidas (respuesta `401`).
+- Consulta y modificación de perfil con JWT.
+- Recuperación de contraseña y expiración del enlace.
+- Listado de profesionales, especialidades y prestaciones.
+- Consulta de horarios y creación de reservas.
+- Pago aprobado y confirmación de reserva.
+- Pago rechazado o anulado sin confirmar indebidamente la reserva.
+- Cancelación con más de 12 horas de anticipación.
+- Rechazo de cancelación con menos de 12 horas.
+- Liberación y reutilización de horarios.
+- Repetición de callbacks de pago sin duplicar efectos.
+- Manejo de errores de conexión y respuestas del servidor.
 
-Registro JSON:
-```json
-{
-  "nombre": "Ana",
-  "apellido": "Pérez",
-  "correo": "ana@example.com",
-  "run": "12345678-9",
-  "fechaNacimiento": "1995-05-10",
-  "password": "ClaveSegura123"
-}
-```
+### Tarjetas de prueba
 
-Login JSON:
-```json
-{
-  "correo": "ana@example.com",
-  "password": "ClaveSegura123"
-}
-```
+Utiliza **únicamente las tarjetas oficiales del ambiente de integración** publicadas por Transbank. Consulta la documentación actualizada en [Transbank Developers](https://www.transbankdevelopers.cl/).
 
-### Servicios
-- GET `/api/especialidades`
-- GET `/api/especialidades/{id}`
-- GET `/api/servicios`
-- GET `/api/servicios?especialidadId=1`
-- GET `/api/servicios/{id}`
+## Estado y alcance
 
-### Profesionales
-- GET `/api/profesionales`
-- GET `/api/profesionales?especialidadId=1`
-- GET `/api/profesionales/{id}`
+SanaEsencia es un **MVP académico y demostrativo** en etapa de validación. Su prioridad es comprobar el funcionamiento de extremo a extremo de los flujos de usuario, reservas y pagos.
 
-### Reservas
-Todas requieren `Authorization: Bearer <token>`.
-- POST `/api/reservas`
-- GET `/api/reservas`
-- GET `/api/reservas/{id}`
-- PATCH `/api/reservas/{id}/cancelacion`
+Posibles mejoras futuras, sujetas a requerimientos del centro:
 
-Crear reserva JSON:
-```json
-{
-  "profesionalId": 1,
-  "servicioId": 1,
-  "fecha": "2027-01-15",
-  "hora": "10:00:00",
-  "modalidad": "Online"
-}
-```
-La duración, nombre de la especialidad, nombre del profesional y nombre del servicio se obtienen de los otros microservicios, no del cliente. Las respuestas de reserva usan DTO y no exponen el correo interno del usuario.
+- Integración con plataformas externas de gestión clínica.
+- Panel administrativo y gestión avanzada de agendas.
+- Notificaciones y recordatorios.
+- Mayor cobertura de pruebas automatizadas y observabilidad.
+- Definición e implementación de políticas de devolución.
+- Endurecimiento de configuración y despliegue para producción.
 
-## Datos de demostración
-El servicio inicializa especialidades y servicios de ejemplo.
-Profesionales crea dos profesionales asociados a especialidad 1 y 2.
-En un entorno limpio los IDs iniciales son 1 y 2.
+## Proyecto relacionado
 
-## Seguridad
-Todos los microservicios comparten el mismo secreto JWT de demostración definido en `application.properties` y en Compose. El secreto es público dentro de este paquete y SOLO sirve para pruebas locales. Sustituirlo por un secreto privado antes de desplegar.
-La contraseña de usuario se almacena con BCrypt. No se expone en las respuestas.
+- **Aplicación Android:** [diegoooo10/SanaEsencia](https://github.com/diegoooo10/SanaEsencia)
 
-## Decisiones y límites conocidos
-- La app está orientada a clientes: no se exponen endpoints administrativos para escritura de servicios ni profesionales.
-- Los GET de servicios y profesionales son públicos para permitir explorar la oferta antes de iniciar sesión.
-- Las reservas se vinculan al correo extraído del JWT; el cliente solo puede consultar/cancelar sus propias reservas.
-- Reserva consulta Servicios y Profesionales por HTTP antes de persistir, y valida especialidad, modalidad y estado de agenda.
-- Los horarios de atención y disponibilidad granular por bloques todavía no están modelados; se evita doble reserva por solapamiento entre reservas persistidas, pero no se genera un calendario completo de disponibilidad.
-- La cancelación requiere 12 horas de anticipación.
-- `ddl-auto=update` es apropiado para esta demo; para producción debe migrarse a Flyway/Liquibase y endurecer credenciales, CORS, rate limiting, logs y políticas de despliegue.
-- El modelo `ProfesionalResponse` mantiene `especialidadesIds`; el modelo `ServicioResponse` usa `especialidadId`, `duracionMinutos`.
+---
+
+**SanaEsencia · Backend REST con Spring Boot, microservicios, MySQL y Docker.**
