@@ -263,6 +263,7 @@ public class PagoService {
         }
 
         String estadoWebpay = consultarEstadoWebpay(token);
+            log.info ( "Estado Webpay para pago {} al procesar retorno interrumpido: {}", pago.getId(), estadoWebpay);
 
         if ("AUTHORIZED".equals(estadoWebpay)) {
             throw new IllegalStateException("La transacción figura como autorizada en Transbank");
