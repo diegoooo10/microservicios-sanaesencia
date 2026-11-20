@@ -1,8 +1,21 @@
-﻿**/target/
-**/.idea/
-**/.vscode/
-*.iml
-*.log
-.DS_Store
-Thumbs.db
-**/application-email.properties
+﻿# Archivos compilados
+*.class
+target/
+
+# Archivos auxiliares
+classpath.txt
+
+# Archivos de prueba de Webpay
+pago-service-sanaesencia/ConsultaWebpay.java
+
+# Microservicio fuera del seguimiento actual
+transbank-service-sanaesencia/
+
+# Respaldos de bases de datos
+*.sql
+
+# Configuración local de VS Code
+.vscode/
+
+# Configuración privada de correo
+usuario-service-sanaesencia/src/main/resources/application-email.properties

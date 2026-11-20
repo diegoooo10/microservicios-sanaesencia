@@ -223,7 +223,7 @@ public class ReservaService {
         if (Duration.between(
                 LocalDateTime.now(),
                 inicio
-        ).toHours() < HORAS_MINIMAS_CANCELACION) {
+        ).compareTo(Duration.ofHours(HORAS_MINIMAS_CANCELACION)) < 0) {
 
             throw new IllegalArgumentException(
                     "La cancelación requiere al menos 12 horas de anticipación"
