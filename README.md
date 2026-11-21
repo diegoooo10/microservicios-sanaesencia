@@ -139,7 +139,6 @@ sequenceDiagram
 - Restricciones de negocio verificadas en el backend, además de reflejarse en Android.
 - Servicios y bases de datos separados por responsabilidad.
 
-No publiques contraseñas, claves de correo, secretos JWT, credenciales de infraestructura, tokens de pago ni archivos `.pem` en los repositorios.
 
 ## Organización de repositorios
 
@@ -157,8 +156,6 @@ Microservicios/
 └── transbank-service-sanaesencia/
 ```
 
-**Importante:** el `README.md` ubicado en la carpeta contenedora `Microservicios/` **no aparecerá automáticamente en GitHub** si esa carpeta no es un repositorio propio. Para publicarlo como documentación general, crea un repositorio de infraestructura/documentación, o inclúyelo en el repositorio que contiene el `compose.yaml` del despliegue. Los README específicos de cada microservicio deben vivir en sus respectivos repositorios.
-
 ## Requisitos de ejecución
 
 - Java 21 y Maven para compilar los servicios fuera de Docker.
@@ -167,53 +164,10 @@ Microservicios/
 - Archivo `compose.yaml`/`docker-compose.yml` configurado para el entorno.
 - Configuración de conexión a MySQL, JWT, SMTP y Webpay TEST según corresponda.
 
-La configuración concreta depende de cada repositorio. **Este README no incluye credenciales ni secretos de ejemplo que deban reutilizarse en producción.**
-
-## Ejecución con Docker Compose
-
-Desde el directorio que contiene el archivo Compose:
-
-```bash
-docker compose up -d --build
-```
-
-Comprobar el estado:
-
-```bash
-docker compose ps
-```
-
-Consultar registros:
-
-```bash
-docker compose logs -f
-```
-
-Reconstruir un servicio modificado (ejemplo):
-
-```bash
-docker compose up -d --build usuario-service
-```
-
-Detener los contenedores sin eliminar volúmenes:
-
-```bash
-docker compose down
-```
-
-> **No ejecutar `docker compose down -v` para una detención habitual:** la opción `-v` elimina volúmenes y puede provocar pérdida de datos persistidos.
 
 ### Despliegue en AWS
 
 El entorno de pruebas utiliza una instancia EC2 Ubuntu con los contenedores del backend y MySQL. El acceso desde Android se realiza mediante un dominio DuckDNS y un proxy inverso hacia el API Gateway.
-
-Para que los usuarios puedan probar la APK, deben permanecer operativos:
-
-1. La instancia EC2.
-2. Los contenedores de microservicios y bases de datos.
-3. El acceso de red, el dominio y el proxy inverso.
-
-Mantener la instancia encendida genera costos según la configuración de AWS.
 
 ## API y documentación de endpoints
 
@@ -270,11 +224,3 @@ Posibles mejoras futuras, sujetas a requerimientos del centro:
 - Mayor cobertura de pruebas automatizadas y observabilidad.
 - Definición e implementación de políticas de devolución.
 - Endurecimiento de configuración y despliegue para producción.
-
-## Proyecto relacionado
-
-- **Aplicación Android:** [diegoooo10/SanaEsencia](https://github.com/diegoooo10/SanaEsencia)
-
----
-
-**SanaEsencia · Backend REST con Spring Boot, microservicios, MySQL y Docker.**
